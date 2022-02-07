@@ -34,16 +34,19 @@ check_os()
 check_pkg()
 {
 	msg "Checking which package manager are you using and installing stubby if it's not there..."
-	if [ apt 2&> /dev/null ]
+	if [ ! stubby 2@> /dev/null ]
 	then
-		apt install stubby
-	elif [ pacman 2&> /dev/null ]
-	then
-		pacman -S stubby
-	elif [ xbps-install 2&> /dev/null ]
-	then
-		xbps-install -S stubby
-	fi 
+		if [ apt 2&> /dev/null ]
+		then
+			apt install stubby
+		elif [ pacman 2&> /dev/null ]
+		then
+			pacman -S stubby
+		elif [ xbps-install 2&> /dev/null ]
+		then
+			xbps-install -S stubby
+		fi
+	fi
 }
 
 nmcli_conf()
