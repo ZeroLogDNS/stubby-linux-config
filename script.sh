@@ -34,13 +34,13 @@ check_os()
 check_pkg()
 {
 	msg "Checking which package manager are you using and installing stubby if it's not there..."
-	if [ apt > /dev/null ]
+	if [ apt 2&> /dev/null ]
 	then
 		apt install stubby
-	elif [ pacman > /dev/null ]
+	elif [ pacman 2&> /dev/null ]
 	then
 		pacman -S stubby
-	elif [ xbps-install > /dev/null ]
+	elif [ xbps-install 2&> /dev/null ]
 	then
 		xbps-install -S stubby
 	fi 
@@ -50,35 +50,43 @@ nmcli_conf()
 {
 	msg "Configuring network manager with nmcli..."
 	conn=$(nmcli con show --active | awk -F "  " 'FNR == 2 {print $1}')
-	nmcli con mod $conn ipv4.dns 127.0.0.1
-	nmcli con mod $conn ipv4.ignore-auto-dns yes
+	nmcli con mod "$conn" ipv4.dns 127.0.0.1
+	nmcli con mod "$conn" ipv4.ignore-auto-dns yes
 }
 
 start_servs()
 {
-	msg "Starting stubby service..."
-	if [ systemctl > /dev/null ]
+	msg "Starting services..."
+	if [ systemctl 2&> /dev/null ]
 	then
 		systemctl enable --now stubby
-	elif [ dinitctl > /dev/null ]
+		systemctl restart NetworkManager
+	elif [ dinitctl 2&> /dev/null ]
 	then
 		dinitctl enable stubby
-	elif [ rc-update > /dev/null ]
+		dinitctl restart NetworkManager
+	elif [ rc-update 2&> /dev/null ]
 	then
 		rc-update add stubby
-	elif [ sv > /dev/null ]
+		rc-service NetworkManager restart
+	elif [ sv 2&> /dev/null ]
+	then
 		if [ $os == "Artix" ]
 		then
 			ln -s /etc/runit/sv/stubby /run/runit/service
+			sv restart NetworkManager
 		else
 			ln -s /etc/sv/stubby /run/service
+			sv restart NetworkManager
 		fi
-	elif [ s6-rc-update > /dev/null ]
+	elif [ s6-rc-update 2&> /dev/null ]
 	then
 		 s6-rc-bundle-update -c /etc/s6/rc/compiled add default stubby
-	elif [ 66-enable > /dev/null ]
+		 s6-svc -r /run/service/NetworkManager
+	elif [ 66-enable 2&> /dev/null ]
 	then
 		66-enable -t default stubby
+		66-start -t default NetworkManager
 	fi 
 }
 
