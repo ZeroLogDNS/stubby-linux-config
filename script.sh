@@ -31,15 +31,8 @@ sys_id_like()
     echo $IDLIKE
 }
 
-maybeartix()
-{
-    artix=$(awk -F= 'FNR == 3 {print $2}' /etc/os-release)
-    echo $artix
-}
-
 ID="$(sys_id)"
 ID_LIKE="$(sys_id_like)"
-maybeArtix="$(maybeartix)"
 
 function yes_no {
     while true; do  
@@ -71,7 +64,7 @@ detect_os()
         elif [ "$ID" = '"solus"' ]; then
             msg "Installing Stubby for Solus OS"
             eopkg install stubby && response="found"
-        elif [ "$maybeArtix" = "artix" ]; then
+        elif [ "$ID" = "artix" ]; then
             pacman -S stubby --noconfirm && response="found"
 
         else
@@ -102,7 +95,7 @@ start_servs()
 		rc-update add stubby && msg "Stubby started." || err "Cannot start stubby"
 		rc-service NetworkManager restart && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 	elif command -v sv 2&> /dev/null ]; then
-		if [ $maybeArtix == "artix" ]; then
+		if [ $ID == "artix" ]; then
 			ln -s /etc/runit/sv/stubby /run/runit/service && msg "Stubby started." || err "Cannot start stubby"
 			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 		else
