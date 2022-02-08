@@ -1,3 +1,5 @@
+#!/bin/bash
+
 err()
 {
 echo >&2 "$(tput bold; tput setaf 1)[-] ERROR: ${*}$(tput sgr0)"
