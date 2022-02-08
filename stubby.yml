@@ -14,13 +14,13 @@ listen_addresses:
 appdata_dir: "/var/cache/stubby"
 upstream_recursive_servers:
 ## ZeroLogDNS
-  - address_data: 94.16.120.86
+  - address_data: 37.221.197.124
     tls_auth_name: "dot.zerologdns.com"
     tls_pubkey_pinset:
       - digest: "sha256"
         value: lLcaG829A+RlMKOtf/cXCrWOt8CmP4TQUaXlnDrlQJI=
         
-  - address_data: 2a03:4000:21:a25:5689:ce80:1f2f:c7fa
+  - address_data: 2a03:4000:9:6bf:54df:25ff:fe7f:9231
     tls_auth_name: "dot.zerologdns.com"
     tls_pubkey_pinset:
       - digest: "sha256"
