@@ -1,52 +1,83 @@
-#!/bin/bash
-
 err()
 {
-  echo >&2 "$(tput bold; tput setaf 1)[-] ERROR: ${*}$(tput sgr0)"
-
-  exit 1337
+echo >&2 "$(tput bold; tput setaf 1)[-] ERROR: ${*}$(tput sgr0)"
 }
-
 msg()
 {
-  echo "$(tput bold; tput setaf 2)[+] ${*}$(tput sgr0)"
+  echo "$(tput bold; tput setaf 48)[+] ${*}$(tput sgr0)"
 }
 
 check_priv()
 {
   if [ "$(id -u)" -ne 0 ]; then
     err "You need to run this as root!"
+    exit 1
   fi
 }
 
-copy_confs()
+check_priv
+
+sys_id()
 {
-	msg "Copying config file..."
-	cp ./stubby.yml /etc/stubby/stubby.yml
+    ID=$(awk -F= '$1=="ID" { print $2 ;}' /etc/os-release)
+    echo $ID
 }
 
-check_os()
+sys_id_like()
 {
-	msg "Checking which distro are use using..."
-	os=$(cat /etc/issue | awk '{print $1}')
+    IDLIKE=$(awk -F= '$1=="ID_LIKE" { print $2 ;}' /etc/os-release)
+    echo $IDLIKE
 }
 
-check_pkg()
+maybeartix()
 {
-	msg "Checking which package manager are you using and installing stubby if it's not there..."
-	if [ ! stubby 2@> /dev/null ]
-	then
-		if [ apt 2&> /dev/null ]
-		then
-			apt install stubby
-		elif [ pacman 2&> /dev/null ]
-		then
-			pacman -S stubby
-		elif [ xbps-install 2&> /dev/null ]
-		then
-			xbps-install -S stubby
-		fi
-	fi
+    artix=$(awk -F= 'FNR == 3 {print $2}' /etc/os-release)
+    echo $artix
+}
+
+ID="$(sys_id)"
+ID_LIKE="$(sys_id_like)"
+maybeArtix="$(maybeartix)"
+
+function yes_no {
+    while true; do  
+        read -p "$(echo -e "\033[1m\033[38;5;11m$* \e[39m[Y/N] ")" yn
+        case $yn in
+            [Yy]*) return 0 ;;  
+            [Nn]*) err "Aborted" ; exit 1 ;;
+        esac
+    done
+}
+
+detect_os()
+{
+    base=$(uname | tr "[:upper:]" "[:lower:]")
+    
+    if [ $base = "linux" ]; then
+        if [ "$ID_LIKE" = "debian" ]; then
+            msg "Installing Stubby for Debian Based system"
+            apt install stubby -y && response="found"
+        elif [ "$ID_LIKE" = "rhel fedora" ]; then
+            msg "Installing Stubby for CentOS/Fedora"
+            dnf install stubby -y && response="found"
+        elif [ "$ID" = "arch" ]; then
+            pacman -S stubby --noconfirm && response="found"
+            msg "Installing Stubby for Arch Linux"
+        elif [ "$ID" = "void" ]; then
+            xbps-install -S stubby --yes && response="found"
+            msg "Installing Stubby for Void"
+        elif [ "$ID" = '"solus"' ]; then
+            msg "Installing Stubby for Solus OS"
+            eopkg install stubby && response="found"
+        elif [ "$maybeArtix" = "artix" ]; then
+            pacman -S stubby --noconfirm && response="found"
+
+        else
+            err "Your system is not supported yet. You have to install the Stubby program manually and rerun the script." ; exit 1
+        fi
+    else
+        err "Your system is not supported yet." ; exit 1
+    fi
 }
 
 nmcli_conf()
@@ -59,50 +90,77 @@ nmcli_conf()
 
 start_servs()
 {
-	msg "Starting services..."
-	if [ systemctl 2&> /dev/null ]
-	then
-		systemctl enable --now stubby
-		systemctl restart NetworkManager
-	elif [ dinitctl 2&> /dev/null ]
-	then
-		dinitctl enable stubby
-		dinitctl restart NetworkManager
-	elif [ rc-update 2&> /dev/null ]
-	then
-		rc-update add stubby
-		rc-service NetworkManager restart
-	elif [ sv 2&> /dev/null ]
-	then
-		if [ $os == "Artix" ]
-		then
-			ln -s /etc/runit/sv/stubby /run/runit/service
-			sv restart NetworkManager
+	if command -v systemctl &> /dev/null; then
+		systemctl enable --now stubby && msg "Stubby started." || err "Cannot start stubby"
+		systemctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+	elif [ dinitctl 2&> /dev/null ]; then
+		dinitctl enable stubby && msg "Stubby started." || err "Cannot start stubby"
+		dinitctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+	elif [ rc-update 2&> /dev/null ]; then
+		rc-update add stubby && msg "Stubby started." || err "Cannot start stubby"
+		rc-service NetworkManager restart && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+	elif [ sv 2&> /dev/null ]; then
+		if [ $maybeArtix == "artix" ]; then
+			ln -s /etc/runit/sv/stubby /run/runit/service && msg "Stubby started." || err "Cannot start stubby"
+			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 		else
-			ln -s /etc/sv/stubby /run/service
-			sv restart NetworkManager
+			ln -s /etc/sv/stubby /run/service && msg "Stubby started." || err "Cannot start stubby"
+			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 		fi
-	elif [ s6-rc-update 2&> /dev/null ]
-	then
-		 s6-rc-bundle-update -c /etc/s6/rc/compiled add default stubby
-		 s6-svc -r /run/service/NetworkManager
-	elif [ 66-enable 2&> /dev/null ]
-	then
-		66-enable -t default stubby
-		66-start -t default NetworkManager
-	fi 
+	elif [ s6-rc-update 2&> /dev/null ]; then
+		 s6-rc-bundle-update -c /etc/s6/rc/compiled add default stubby && msg "Stubby started." || err "Cannot start stubby"
+		 s6-svc -r /run/service/NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+	elif [ 66-enable 2&> /dev/null ]; then
+		66-enable -t default stubby && msg "Stubby started." || err "Cannot start stubby"
+		66-start -t default NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+	fi
 }
 
-finish()
+set_config_path()
 {
-	msg "All things done, have fun!"
-	exit 0
+    if [ $ID = '"solus"' ]; then
+        configfile="/usr/share/defaults/stubby/stubby.yml"
+        backupfile="/usr/share/defaults/stubby/stubby.yml.bak"
+    else
+        configfile="/etc/stubby/stubby.yml"
+        backupfile="/etc/stubby/stubby.yml.bak"
+    fi
 }
 
-check_priv
-copy_confs
-check_os
-check_pkg
-nmcli_conf
-start_servs
-finish
+set_config_path
+
+check_stubby()  
+{
+    if ! command -v stubby &> /dev/null; then
+        err "Stubby not Found"
+        yes_no "[*] Do you want to install stubby?" && detect_os
+    elif command -v stubby &> /dev/null; then
+        msg "Stubby found!" ; response="found" 
+    fi
+}
+check_stubby
+
+download_configs()
+{
+    msg "Downloading stubby config file from: [ https://zerologdns.com/stubby.yml ]"
+    curl https://zerologdns.com/stubby.yml -o $configfile 2>/dev/null && msg "Success! File is downloaded!" || { err "Cannot download file" ; exit 1; } 
+}
+
+
+backup_configs()
+{
+    if [ -f "$backupfile" ]; then
+        msg "Backup File Found! [$backupfile]"
+    else
+        mv $configfile $backupfile && msg "Backup file created: [ $backupfile ]"
+    fi
+}
+
+if [ $response = "found" ]; then
+    backup_configs
+    download_configs
+    nmcli_conf
+    start_servs
+else
+    err "Unexpected response!"
+fi
