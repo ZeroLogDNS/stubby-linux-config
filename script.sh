@@ -95,13 +95,13 @@ start_servs()
 	if command -v systemctl &> /dev/null; then
 		systemctl enable --now stubby && msg "Stubby started." || err "Cannot start stubby"
 		systemctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
-	elif [ dinitctl 2&> /dev/null ]; then
+	elif command -v dinitctl 2&> /dev/null ]; then
 		dinitctl enable stubby && msg "Stubby started." || err "Cannot start stubby"
 		dinitctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
-	elif [ rc-update 2&> /dev/null ]; then
+	elif command -v rc-update 2&> /dev/null ]; then
 		rc-update add stubby && msg "Stubby started." || err "Cannot start stubby"
 		rc-service NetworkManager restart && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
-	elif [ sv 2&> /dev/null ]; then
+	elif command -v sv 2&> /dev/null ]; then
 		if [ $maybeArtix == "artix" ]; then
 			ln -s /etc/runit/sv/stubby /run/runit/service && msg "Stubby started." || err "Cannot start stubby"
 			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
@@ -109,10 +109,10 @@ start_servs()
 			ln -s /etc/sv/stubby /run/service && msg "Stubby started." || err "Cannot start stubby"
 			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 		fi
-	elif [ s6-rc-update 2&> /dev/null ]; then
+	elif command -v s6-rc-update 2&> /dev/null ]; then
 		 s6-rc-bundle-update -c /etc/s6/rc/compiled add default stubby && msg "Stubby started." || err "Cannot start stubby"
 		 s6-svc -r /run/service/NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
-	elif [ 66-enable 2&> /dev/null ]; then
+	elif command -v 66-enable 2&> /dev/null ]; then
 		66-enable -t default stubby && msg "Stubby started." || err "Cannot start stubby"
 		66-start -t default NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 	fi
