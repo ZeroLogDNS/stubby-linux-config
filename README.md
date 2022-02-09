@@ -37,6 +37,8 @@
 
 **SolusOS**
 
+**Void**
+
 **Debian**
 
 **Ubuntu**
