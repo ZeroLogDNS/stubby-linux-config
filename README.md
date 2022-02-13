@@ -44,3 +44,9 @@
 **Ubuntu**
 
 *Nearly all Debian based system with NetworkManager*
+
+*Nearly all Arch based system with NetworkManager*
+
+## Unsupported:
+
+**Raspberry PI OS**
