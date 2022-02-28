@@ -31,6 +31,8 @@
 
 **Arch**
 
+**Arco Linux**
+
 **CentOS**
 
 **Fedora**
