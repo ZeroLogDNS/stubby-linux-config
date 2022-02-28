@@ -58,6 +58,9 @@ detect_os()
         elif [ "$ID" = "arch" ]; then
             pacman -S stubby --noconfirm && response="found"
             msg "Installing Stubby for Arch Linux"
+	elif [ "$ID_LIKE" = "arch" ]; then
+            pacman -S stubby --noconfirm && response="found"
+            msg "Installing Stubby for Arch Linux"
         elif [ "$ID" = "void" ]; then
             xbps-install -S stubby --yes && response="found"
             msg "Installing Stubby for Void"
