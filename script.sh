@@ -55,6 +55,9 @@ detect_os()
         elif [ "$ID_LIKE" = "rhel fedora" ]; then
             msg "Installing Stubby for CentOS/Fedora"
             dnf install stubby -y && response="found"
+	elif [ "$ID" = "fedora" ]; then
+            msg "Installing Stubby for Fedora"
+            dnf install stubby -y && response="found"
         elif [ "$ID" = "arch" ]; then
             pacman -S stubby --noconfirm && response="found"
             msg "Installing Stubby for Arch Linux"
