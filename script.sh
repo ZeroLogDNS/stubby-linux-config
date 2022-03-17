@@ -86,7 +86,9 @@ nmcli_conf()
 	msg "Configuring network manager with nmcli..."
 	conn=$(nmcli con show --active | awk -F "  " 'FNR == 2 {print $1}')
 	nmcli con mod "$conn" ipv4.dns 127.0.0.1
+	nmcli con mod "$conn" ipv6.dns ::1
 	nmcli con mod "$conn" ipv4.ignore-auto-dns yes
+	nmcli con mod "$conn" ipv6.ignore-auto-dns yes
 }
 
 start_servs()
