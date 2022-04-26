@@ -44,27 +44,44 @@ function yes_no {
     done
 }
 
+select_server()
+{
+PS3=$'\e[01;33mChoose which version you want: \e[0m'
+options=(Unfiltered Ad-Block Quit)
+select menu in "${options[@]}";
+do
+  if [ "$menu" == "Unfiltered" ]; then
+    configlink="https://zerologdns.com/stubby.yml"
+    return 0
+  elif [ "$menu" == "Ad-Block" ]; then
+    configlink="https://zerologdns.com/adblock-stubby.yml"
+    return 0
+  elif [ "$menu" == "Quit" ]; then
+    msg "Exited" ; exit 1
+  else
+    err "Unexpected answer" ; exit 1 ;
+  fi
+done
+}
+
 detect_os()
 {
     base=$(uname | tr "[:upper:]" "[:lower:]")
     
     if [ $base = "linux" ]; then
-        if [ "$ID_LIKE" = "debian" ]; then
+        if [ "$ID_LIKE" = "debian" || "$ID_LIKE" = "ubuntu"  ]; then
             msg "Installing Stubby for Debian Based system"
             apt install stubby -y && response="found"
         elif [ "$ID_LIKE" = "rhel fedora" ]; then
             msg "Installing Stubby for CentOS/Fedora"
             dnf install stubby -y && response="found"
-	elif [ "$ID_LIKE" = "ubuntu" ]; then
-            msg "Installing Stubby for Ubuntu Based system"
-            apt install stubby -y && response="found"
-	elif [ "$ID" = "fedora" ]; then
+	    elif [ "$ID" = "fedora" ]; then
             msg "Installing Stubby for Fedora"
             dnf install stubby -y && response="found"
         elif [ "$ID" = "arch" ]; then
             pacman -S stubby --noconfirm && response="found"
             msg "Installing Stubby for Arch Linux"
-	elif [ "$ID_LIKE" = "arch" ]; then
+	    elif [ "$ID_LIKE" = "arch" ]; then
             pacman -S stubby --noconfirm && response="found"
             msg "Installing Stubby for Arch Linux"
         elif [ "$ID" = "void" ]; then
@@ -97,27 +114,27 @@ nmcli_conf()
 start_servs()
 {
 	if command -v systemctl &> /dev/null; then
-		systemctl enable --now stubby && msg "Stubby started." || err "Cannot start stubby"
+		systemctl enable --now stubby && systemctl restart NetworkManager && msg "Stubby started." || err "Cannot start stubby"
 		systemctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 	elif command -v dinitctl 2&> /dev/null ]; then
-		dinitctl enable stubby && msg "Stubby started." || err "Cannot start stubby"
+		dinitctl enable stubby && dinitctl restart stubby && msg "Stubby started." || err "Cannot start stubby"
 		dinitctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 	elif command -v rc-update 2&> /dev/null ]; then
-		rc-update add stubby && msg "Stubby started." || err "Cannot start stubby"
+		rc-update add stubby && rc-service stubby restart && msg "Stubby started." || err "Cannot start stubby"
 		rc-service NetworkManager restart && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 	elif command -v sv 2&> /dev/null ]; then
 		if [ $ID == "artix" ]; then
-			ln -s /etc/runit/sv/stubby /run/runit/service && msg "Stubby started." || err "Cannot start stubby"
+			ln -s /etc/runit/sv/stubby /run/runit/service && sv restart stubby && msg "Stubby started." || err "Cannot start stubby"
 			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 		else
-			ln -s /etc/sv/stubby /run/service && msg "Stubby started." || err "Cannot start stubby"
+			ln -s /etc/sv/stubby /run/service && sv restart stubby && msg "Stubby started." || err "Cannot start stubby"
 			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 		fi
 	elif command -v s6-rc-update 2&> /dev/null ]; then
-		 s6-rc-bundle-update -c /etc/s6/rc/compiled add default stubby && msg "Stubby started." || err "Cannot start stubby"
+		 s6-rc-bundle-update -c /etc/s6/rc/compiled add default stubby && s6-svc -r /run/service/Stubby && msg "Stubby started." || err "Cannot start stubby"
 		 s6-svc -r /run/service/NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 	elif command -v 66-enable 2&> /dev/null ]; then
-		66-enable -t default stubby && msg "Stubby started." || err "Cannot start stubby"
+		66-enable -t default stubby && 66-start -t default stubby && msg "Stubby started." || err "Cannot start stubby"
 		66-start -t default NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 	fi
 }
@@ -148,8 +165,8 @@ check_stubby
 
 download_configs()
 {
-    msg "Downloading stubby config file from: [ https://zerologdns.com/stubby.yml ]"
-    curl https://zerologdns.com/stubby.yml -o $configfile 2>/dev/null && msg "Success! File is downloaded!" || { err "Cannot download file" ; exit 1; } 
+    msg "Downloading stubby config file from: [ $configlink ]"
+    curl $configlink -o $configfile 2>/dev/null && msg "Success! File is downloaded!" || { err "Cannot download file" ; exit 1; } 
 }
 
 
@@ -163,10 +180,11 @@ backup_configs()
 }
 
 if [ $response = "found" ]; then
+    select_server
     backup_configs
     download_configs
     nmcli_conf
     start_servs
 else
-    err "Unexpected response!"
+    err "Unexpected response!" ; exit 1 ;
 fi
