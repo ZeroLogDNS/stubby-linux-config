@@ -114,7 +114,7 @@ nmcli_conf()
 start_servs()
 {
 	if command -v systemctl &> /dev/null; then
-		systemctl enable --now stubby && systemctl restart NetworkManager && msg "Stubby started." || err "Cannot start stubby"
+		systemctl enable --now stubby && systemctl restart stubby && msg "Stubby started." || err "Cannot start stubby"
 		systemctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 	elif command -v dinitctl 2&> /dev/null ]; then
 		dinitctl enable stubby && dinitctl restart stubby && msg "Stubby started." || err "Cannot start stubby"
