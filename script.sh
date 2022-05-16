@@ -69,7 +69,7 @@ detect_os()
     base=$(uname | tr "[:upper:]" "[:lower:]")
     
     if [ $base = "linux" ]; then
-        if [ "$ID_LIKE" = "debian" || "$ID_LIKE" = "ubuntu"  ]; then
+        if [ "$ID_LIKE" = "debian" || "$ID_LIKE" = "ubuntu" || "$ID" = "debian" ]; then
             msg "Installing Stubby for Debian Based system"
             apt install stubby -y && response="found"
         elif [ "$ID_LIKE" = "rhel fedora" ]; then
