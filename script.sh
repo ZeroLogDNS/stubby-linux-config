@@ -72,7 +72,7 @@ detect_os()
         if [ "$ID_LIKE" = "debian" || "$ID_LIKE" = "ubuntu" || "$ID" = "debian" ]; then
             msg "Installing Stubby for Debian Based system"
             apt install stubby -y && response="found"
-        elif [ "$ID_LIKE" = "rhel fedora" ]; then
+        elif [ "$ID_LIKE" = "rhel fedora" || "$ID" = "fedora" ]; then
             msg "Installing Stubby for CentOS/Fedora"
             dnf install stubby -y && response="found"
 	    elif [ "$ID" = "fedora" ]; then
@@ -81,7 +81,7 @@ detect_os()
         elif [ "$ID" = "arch" ]; then
             pacman -S stubby --noconfirm && response="found"
             msg "Installing Stubby for Arch Linux"
-	    elif [ "$ID_LIKE" = "arch" ]; then
+	    elif [ "$ID_LIKE" = "arch" || "$ID" = "artix" ]; then
             pacman -S stubby --noconfirm && response="found"
             msg "Installing Stubby for Arch Linux"
         elif [ "$ID" = "void" ]; then
