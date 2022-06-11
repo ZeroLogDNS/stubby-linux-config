@@ -69,19 +69,19 @@ detect_os()
     base=$(uname | tr "[:upper:]" "[:lower:]")
     
     if [ $base = "linux" ]; then
-        if [ "$ID_LIKE" = "debian" || "$ID_LIKE" = "ubuntu" || "$ID" = "debian" ]; then
+        if [[ $ID_LIKE = "debian" || $ID_LIKE = "ubuntu" || $ID = "debian" ]]; then
             msg "Installing Stubby for Debian Based system"
             apt install stubby -y && response="found"
-        elif [ "$ID_LIKE" = "rhel fedora" || "$ID" = "fedora" ]; then
+        elif [[ $ID_LIKE = "rhel fedora" || $ID = "fedora" ]]; then
             msg "Installing Stubby for CentOS/Fedora"
             dnf install stubby -y && response="found"
-        elif [ "$ID" = "arch" || "$ID" = "artix" || "$ID_LIKE" = "arch" ]; then
+        elif [[ $ID = "arch" || $ID = "artix" || $ID_LIKE = "arch" ]]; then
             pacman -S stubby --noconfirm && response="found"
             msg "Installing Stubby for Arch Linux"
-        elif [ "$ID" = "void" ]; then
+        elif [[ $ID = "void" ]]; then
             xbps-install -S stubby --yes && response="found"
             msg "Installing Stubby for Void"
-        elif [ "$ID" = '"solus"' ]; then
+        elif [[ $ID = '"solus"' ]]; then
             msg "Installing Stubby for Solus OS"
             eopkg install stubby && response="found"
 
