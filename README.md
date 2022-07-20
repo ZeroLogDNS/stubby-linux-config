@@ -52,3 +52,5 @@
 ## Unsupported:
 
 **Raspberry PI OS**
+
+**MX Linux (Sysvinit)**
