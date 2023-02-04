@@ -32,6 +32,14 @@ sys_id()
     echo $ID
 }
 
+
+message()
+{
+    printf "\n"
+    echo "$(tput bold; tput setaf 207)[♥] Thank you for using ZeroLogDNS! $(tput sgr0)"
+       
+}
+
 sys_id_like()
 {
     IDLIKE=$(awk -F= '$1=="ID_LIKE" { print $2 ;}' /etc/os-release)
@@ -104,10 +112,24 @@ nmcli_conf()
 
 check_dns()
 {
+
+    info "Testing the DNS configuration."
     if [[ $(curl https://t.zerologdns.net 2>/dev/null | sed -En 's/.*"Response":"([^"]*).*/\1/p') == yes ]]; then
         msg "Success! You are using zerologdns!"
+    elif [[ $(curl https://t.zerologdns.net 2>/dev/null | sed -En 's/.*"Response":"([^"]*).*/\1/p') == no ]]; then
+        info "You still seem to be using a different DNS server than zerologdns!"
+        info "I will try again after sleeping for 5 seconds."
+        sleep 5
+        if [[ $(curl https://t.zerologdns.net 2>/dev/null | sed -En 's/.*"Response":"([^"]*).*/\1/p') == yes ]]; then
+            msg "Success! You are using zerologdns!"
+        else
+            err "Something went wrong, the setup failed! Try rebooting." 
+            err "Contact us on discord: https://zerologdns.com/discord" ; exit 1
+        fi
+
     else
-        err "Something went wrong, the setup failed! Try rebooting."
+        err "Something went wrong, the setup failed! Try rebooting." 
+        err "Contact us on discord: https://zerologdns.com/discord" ; exit 1
     fi
 }
 
@@ -183,7 +205,10 @@ if [ $response = "found" ]; then
     download_configs
     nmcli_conf
     start_servs
+    msg "Waiting for 3 seconds."
+    sleep 3
     check_dns
+    message
 else
     err "Unexpected response!" ; exit 1 ;
 fi
