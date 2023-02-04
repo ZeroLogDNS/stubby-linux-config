@@ -9,6 +9,13 @@ msg()
   echo "$(tput bold; tput setaf 48)[+] ${*}$(tput sgr0)"
 }
 
+info()
+{
+    echo "$(tput bold; tput setaf 220)[*] ${*}$(tput sgr0)"
+}
+
+configlink="https://zerologdns.com/stubby.yml"
+
 check_priv()
 {
   if [ "$(id -u)" -ne 0 ]; then
@@ -44,26 +51,6 @@ function yes_no {
     done
 }
 
-select_server()
-{
-PS3=$'\e[01;33mChoose which version you want: \e[0m'
-options=(Unfiltered Ad-Block Quit)
-select menu in "${options[@]}";
-do
-  if [ "$menu" == "Unfiltered" ]; then
-    configlink="https://zerologdns.com/stubby.yml"
-    return 0
-  elif [ "$menu" == "Ad-Block" ]; then
-    configlink="https://zerologdns.com/adblock-stubby.yml"
-    return 0
-  elif [ "$menu" == "Quit" ]; then
-    msg "Exited" ; exit 1
-  else
-    err "Unexpected answer" ; exit 1 ;
-  fi
-done
-}
-
 detect_os()
 {
     base=$(uname | tr "[:upper:]" "[:lower:]")
@@ -97,10 +84,31 @@ nmcli_conf()
 {
 	msg "Configuring network manager with nmcli..."
 	conn=$(nmcli con show --active | awk -F "  " 'FNR == 2 {print $1}')
-	nmcli con mod "$conn" ipv4.dns 127.0.0.1
-	nmcli con mod "$conn" ipv6.dns ::1
-	nmcli con mod "$conn" ipv4.ignore-auto-dns yes
-	nmcli con mod "$conn" ipv6.ignore-auto-dns yes
+    test_ipv4=$(nmcli con mod "$conn" ipv4.dns 127.0.0.1 2>&1)
+    test_ipv6=$(nmcli con mod "$conn" ipv6.dns ::1 2>&1)
+
+
+    if [[ "$test_ipv4" == *method=disabled* ]]; then
+        info "IPV4 is not enabled. Skip NMCLI IPV4 setting."
+    else
+        nmcli con mod "$conn" ipv4.dns 127.0.0.1 && nmcli con mod "$conn" ipv4.ignore-auto-dns yes
+    fi
+
+    if [[ "$test_ipv6" == *method=disabled* ]]; then
+        info "IPV6 is not enabled. Skip NMCLI IPV6 setting."
+    else
+        nmcli con mod "$conn" ipv6.dns ::1 && nmcli con mod "$conn" ipv6.ignore-auto-dns yes
+    fi
+	
+}
+
+check_dns()
+{
+    if [[ $(curl https://t.zerologdns.net 2>/dev/null | sed -En 's/.*"Response":"([^"]*).*/\1/p') == yes ]]; then
+        msg "Success! You are using zerologdns!"
+    else
+        err "Something went wrong, the setup failed! Try rebooting."
+    fi
 }
 
 start_servs()
@@ -108,13 +116,13 @@ start_servs()
 	if command -v systemctl &> /dev/null; then
 		systemctl enable --now stubby && systemctl restart stubby && msg "Stubby started." || err "Cannot start stubby"
 		systemctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
-	elif command -v dinitctl 2&> /dev/null ]; then
+	elif command -v dinitctl 2&> /dev/null; then
 		dinitctl enable stubby && dinitctl restart stubby && msg "Stubby started." || err "Cannot start stubby"
 		dinitctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
-	elif command -v rc-update 2&> /dev/null ]; then
+	elif command -v rc-update 2&> /dev/null; then
 		rc-update add stubby && rc-service stubby restart && msg "Stubby started." || err "Cannot start stubby"
 		rc-service NetworkManager restart && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
-	elif command -v sv 2&> /dev/null ]; then
+	elif command -v sv 2&> /dev/null; then
 		if [ $ID == "artix" ]; then
 			ln -s /etc/runit/sv/stubby /run/runit/service && sv restart stubby && msg "Stubby started." || err "Cannot start stubby"
 			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
@@ -122,10 +130,10 @@ start_servs()
 			ln -s /etc/sv/stubby /run/service && sv restart stubby && msg "Stubby started." || err "Cannot start stubby"
 			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 		fi
-	elif command -v s6-rc-update 2&> /dev/null ]; then
+	elif command -v s6-rc-update 2&> /dev/null; then
 		 s6-rc-bundle-update -c /etc/s6/rc/compiled add default stubby && s6-svc -r /run/service/Stubby && msg "Stubby started." || err "Cannot start stubby"
 		 s6-svc -r /run/service/NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
-	elif command -v 66-enable 2&> /dev/null ]; then
+	elif command -v 66-enable 2&> /dev/null; then
 		66-enable -t default stubby && 66-start -t default stubby && msg "Stubby started." || err "Cannot start stubby"
 		66-start -t default NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
 	fi
@@ -142,8 +150,6 @@ set_config_path()
     fi
 }
 
-set_config_path
-
 check_stubby()  
 {
     if ! command -v stubby &> /dev/null; then
@@ -158,7 +164,7 @@ check_stubby
 download_configs()
 {
     msg "Downloading stubby config file from: [ $configlink ]"
-    curl $configlink -o $configfile 2>/dev/null && msg "Success! File is downloaded!" || { err "Cannot download file" ; exit 1; } 
+    curl $configlink -o $configfile 2>/dev/null && msg "Success! File is downloaded!" || { err "Cannot download file" ; exit 1; }
 }
 
 
@@ -172,11 +178,12 @@ backup_configs()
 }
 
 if [ $response = "found" ]; then
-    select_server
+    set_config_path
     backup_configs
     download_configs
     nmcli_conf
     start_servs
+    check_dns
 else
     err "Unexpected response!" ; exit 1 ;
 fi
