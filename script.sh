@@ -99,13 +99,13 @@ nmcli_conf()
     if [[ "$test_ipv4" == *method=disabled* ]]; then
         info "IPV4 is not enabled. Skip NMCLI IPV4 setting."
     else
-        nmcli con mod "$conn" ipv4.dns 127.0.0.1 && nmcli con mod "$conn" ipv4.ignore-auto-dns yes
+        nmcli con mod "$conn" ipv4.dns 127.0.0.1 && nmcli con mod "$conn" ipv4.ignore-auto-dns yes && msg "DNS server is set to 127.0.0.1"
     fi
 
     if [[ "$test_ipv6" == *method=disabled* ]]; then
         info "IPV6 is not enabled. Skip NMCLI IPV6 setting."
     else
-        nmcli con mod "$conn" ipv6.dns ::1 && nmcli con mod "$conn" ipv6.ignore-auto-dns yes
+        nmcli con mod "$conn" ipv6.dns ::1 && nmcli con mod "$conn" ipv6.ignore-auto-dns yes && msg "DNS server is set to ::1"
     fi
 	
 }
@@ -129,35 +129,60 @@ check_dns()
 
     else
         err "Something went wrong, the setup failed! Try rebooting." 
-        err "Contact us on discord: https://zerologdns.com/discord" ; exit 1
+        err "Contact us on discord: https://zerologdns.com/discord" ; exit 1cat
     fi
 }
 
 start_servs()
 {
 	if command -v systemctl &> /dev/null; then
-		systemctl enable --now stubby && systemctl restart stubby && msg "Stubby started." || err "Cannot start stubby"
-		systemctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+        if [[ $1 == "stubby" ]]; then
+		    systemctl enable --now stubby && systemctl restart stubby && msg "Stubby started." || err "Cannot start stubby"
+        elif [[ $1 == "net" ]]; then
+		    systemctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+        else
+            err "Invalid argument" ; exit 1
+        fi
 	elif command -v dinitctl 2&> /dev/null; then
-		dinitctl enable stubby && dinitctl restart stubby && msg "Stubby started." || err "Cannot start stubby"
-		dinitctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+        if [[ $1 == "stubby" ]]; then
+		    dinitctl enable stubby && dinitctl restart stubby && msg "Stubby started." || err "Cannot start stubby"
+        elif [[ $1 == "net" ]]; then
+		    dinitctl restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+        else
+            err "Invalid argument" ; exit 1
+        fi
 	elif command -v rc-update 2&> /dev/null; then
-		rc-update add stubby && rc-service stubby restart && msg "Stubby started." || err "Cannot start stubby"
-		rc-service NetworkManager restart && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+        if [[ $1 == "stubby" ]]; then
+		    rc-update add stubby && rc-service stubby restart && msg "Stubby started." || err "Cannot start stubby"
+        elif [[ $1 == "net" ]]; then
+		    rc-service NetworkManager restart && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+        fi
 	elif command -v sv 2&> /dev/null; then
 		if [ $ID == "artix" ]; then
-			ln -s /etc/runit/sv/stubby /run/runit/service && sv restart stubby && msg "Stubby started." || err "Cannot start stubby"
-			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+            if [[ $1 == "stubby" ]]; then
+			    ln -s /etc/runit/sv/stubby /run/runit/service && sv restart stubby && msg "Stubby started." || err "Cannot start stubby"
+            elif [[ $1 == "net" ]]; then
+                sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+            fi
 		else
-			ln -s /etc/sv/stubby /run/service && sv restart stubby && msg "Stubby started." || err "Cannot start stubby"
-			sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+            if [[ $1 == "stubby" ]]; then
+			    ln -s /etc/sv/stubby /run/service && sv restart stubby && msg "Stubby started." || err "Cannot start stubby"
+            elif [[ $1 == "net" ]]; then
+			    sv restart NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+            fi
 		fi
 	elif command -v s6-rc-update 2&> /dev/null; then
-		 s6-rc-bundle-update -c /etc/s6/rc/compiled add default stubby && s6-svc -r /run/service/Stubby && msg "Stubby started." || err "Cannot start stubby"
-		 s6-svc -r /run/service/NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+        if [[ $1 == "stubby" ]]; then
+		    s6-rc-bundle-update -c /etc/s6/rc/compiled add default stubby && s6-svc -r /run/service/Stubby && msg "Stubby started." || err "Cannot start stubby"
+        elif [[ $1 == "net" ]]; then
+		    s6-svc -r /run/service/NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+        fi
 	elif command -v 66-enable 2&> /dev/null; then
-		66-enable -t default stubby && 66-start -t default stubby && msg "Stubby started." || err "Cannot start stubby"
-		66-start -t default NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+        if [[ $1 == "stubby" ]]; then
+		    66-enable -t default stubby && 66-start -t default stubby && msg "Stubby started." || err "Cannot start stubby"
+        elif [[ $1 == "net" ]]; then
+		    66-start -t default NetworkManager && msg "NetworkManager restarted." || err "Cannot restart NetworkManager"
+        fi
 	fi
 }
 
@@ -175,7 +200,7 @@ set_config_path()
 check_stubby()  
 {
     if ! command -v stubby &> /dev/null; then
-        err "Stubby not Found"
+        info "Stubby not Found"
         yes_no "[*] Do you want to install stubby?" && detect_os
     elif command -v stubby &> /dev/null; then
         msg "Stubby found!" ; response="found" 
@@ -185,10 +210,9 @@ check_stubby
 
 download_configs()
 {
-    msg "Downloading stubby config file from: [ $configlink ]"
+    info "Downloading stubby config file from: [ $configlink ]"
     curl $configlink -o $configfile 2>/dev/null && msg "Success! File is downloaded!" || { err "Cannot download file" ; exit 1; }
 }
-
 
 backup_configs()
 {
@@ -203,8 +227,9 @@ if [ $response = "found" ]; then
     set_config_path
     backup_configs
     download_configs
+    start_servs "stubby" || exit 1
     nmcli_conf
-    start_servs
+    start_servs "net" || exit 1
     msg "Waiting for 3 seconds."
     sleep 3
     check_dns
