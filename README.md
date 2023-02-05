@@ -1,7 +1,9 @@
 # Automatic ZeroLogDNS Installer (Linux only)
 
-## ScreenShot - SolusOS
-![Screenshot from 2022-02-08 23-42-56](https://user-images.githubusercontent.com/55440418/153094092-9bc475ee-fef9-443a-9231-3bd04f3cf65a.png)
+## ScreenShot - Fedora
+
+![Screenshot from 2023-02-05 22-47-21](https://user-images.githubusercontent.com/55440418/216847930-a869cc1b-236b-432a-b214-3a6a0f811df4.png)
+
 
 ## Dependencies:
 
