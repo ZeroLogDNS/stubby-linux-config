@@ -129,7 +129,7 @@ check_dns()
 
     else
         err "Something went wrong, the setup failed! Try rebooting." 
-        err "Contact us on discord: https://zerologdns.com/discord" ; exit 1cat
+        err "Contact us on discord: https://zerologdns.com/discord" ; exit 1
     fi
 }
 
