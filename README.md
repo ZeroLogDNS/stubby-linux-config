@@ -29,8 +29,6 @@
 
 ## OS Support:
 
-**Artix**
-
 **Arch**
 
 **Arco Linux**
@@ -56,3 +54,5 @@
 **Raspberry PI OS**
 
 **MX Linux (Sysvinit)**
+
+**Artix**
