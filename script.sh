@@ -14,7 +14,25 @@ info()
     echo "$(tput bold; tput setaf 220)[*] ${*}$(tput sgr0)"
 }
 
-configlink="https://zerologdns.com/stubby.yml"
+select_server()
+{
+PS3=$'\e[01;33m[!] Choose which version you want: \e[0m'
+options=(Unfiltered Ad-Block Quit)
+select menu in "${options[@]}";
+do
+  if [ "$menu" == "Unfiltered" ]; then
+    configlink="https://zerologdns.com/stubby.yml"
+    return 0
+  elif [ "$menu" == "Ad-Block" ]; then
+    configlink="https://zerologdns.com/clearnet-stubby.yml"
+    return 0
+  elif [ "$menu" == "Quit" ]; then
+    info "Exited" ; exit 1
+  else
+    err "Unexpected answer" ; exit 1 ;
+  fi
+done
+}
 
 check_priv()
 {
@@ -124,12 +142,12 @@ check_dns()
             msg "Success! You are using zerologdns!"
         else
             err "Something went wrong, the setup failed! Try rebooting." 
-            err "Contact us on discord: https://zerologdns.com/discord" ; exit 1
+            info "Contact us on discord: https://zerologdns.com/discord" ; exit 1
         fi
 
     else
         err "Something went wrong, the setup failed! Try rebooting." 
-        err "Contact us on discord: https://zerologdns.com/discord" ; exit 1
+        err "Contact us on discord: https://zerologdns.com/discord" ; exit 1cat
     fi
 }
 
@@ -206,6 +224,8 @@ check_stubby()
         msg "Stubby found!" ; response="found" 
     fi
 }
+
+select_server
 check_stubby
 
 download_configs()
